@@ -1,0 +1,30 @@
+{
+	"schemaVersion": 1,
+	"id": "ash",
+	"version": "${version}",
+	"name": "ash",
+	"description": "Client side rendering and input tweaks.",
+	"authors": [
+		"leaves"
+	],
+	"contact": {},
+	"license": "CC0-1.0",
+	"icon": "assets/ash/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"com.leaves.ash.client.AshClient"
+		]
+	},
+	"mixins": [
+		{
+			"config": "ash.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~1.20.1",
+		"java": ">=17"
+	}
+}

@@ -1,0 +1,21 @@
+{
+	"required": true,
+	"package": "com.leaves.ash.client.mixin",
+	"compatibilityLevel": "JAVA_17",
+	"client": [
+		"MinecraftTickMixin",
+		"LevelChangeMixin",
+		"ChatSendMixin",
+		"KeyboardHandlerMixin",
+		"GameModeAttackMixin",
+		"PositionResetMixin",
+		"BrandMixin",
+		"FishingHookAccessor"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
