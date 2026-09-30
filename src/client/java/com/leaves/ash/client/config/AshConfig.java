@@ -185,7 +185,7 @@ public final class AshConfig {
      * is no player to hold the rod.
      */
     public boolean fishWhileScreenOpen = true;
-
+    public boolean combatWhileScreenOpen = true;
     /**
      * Presses "respawn" on the death screen on its own, after a human-ish pause, so an
      * unattended session survives a beating instead of sitting on the death screen all
@@ -289,6 +289,7 @@ public final class AshConfig {
         fishPauseMaxMs = Math.max(fishPauseMinMs, getInt(props, "fishPauseMaxMs", fishPauseMaxMs));
 
         fishWhileScreenOpen = getBool(props, "fishWhileScreenOpen", fishWhileScreenOpen);
+        combatWhileScreenOpen = getBool(props, "combatWhileScreenOpen", combatWhileScreenOpen);
         autoRespawn = getBool(props, "autoRespawn", autoRespawn);
         autoRespawnMinMs = Math.max(0, getInt(props, "autoRespawnMinMs", autoRespawnMinMs));
         autoRespawnMaxMs = Math.max(autoRespawnMinMs, getInt(props, "autoRespawnMaxMs", autoRespawnMaxMs));
@@ -357,6 +358,7 @@ public final class AshConfig {
         props.setProperty("fishPauseMinMs", String.valueOf(fishPauseMinMs));
         props.setProperty("fishPauseMaxMs", String.valueOf(fishPauseMaxMs));
         props.setProperty("fishWhileScreenOpen", String.valueOf(fishWhileScreenOpen));
+        props.setProperty("combatWhileScreenOpen", String.valueOf(combatWhileScreenOpen));
         props.setProperty("autoRespawn", String.valueOf(autoRespawn));
         props.setProperty("autoRespawnMinMs", String.valueOf(autoRespawnMinMs));
         props.setProperty("autoRespawnMaxMs", String.valueOf(autoRespawnMaxMs));

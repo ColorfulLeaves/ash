@@ -128,7 +128,12 @@ public final class CombatEngine {
             return;
         }
 
-        if (mc.screen != null || player.isDeadOrDying() || player.isSpectator() || player.isUsingItem()) {
+        if (!config.combatWhileScreenOpen && mc.screen != null) {
+            release();
+            return;
+        }
+
+        if (player.isDeadOrDying() || player.isSpectator() || player.isUsingItem()) {
             release();
             return;
         }
