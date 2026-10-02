@@ -2,6 +2,7 @@ package com.leaves.ash.client;
 
 import com.leaves.ash.Ash;
 import com.leaves.ash.client.combat.CombatEngine;
+import com.leaves.ash.client.cloudpick.CloudPickController;
 import com.leaves.ash.client.command.ClientCommands;
 import com.leaves.ash.client.config.AshConfig;
 import com.leaves.ash.client.fish.FishingController;
@@ -26,6 +27,7 @@ public class AshClient implements ClientModInitializer {
         MovementController.INSTANCE.setConfig(CONFIG);
         FishingController.INSTANCE.setConfig(CONFIG);
         RespawnHandler.INSTANCE.setConfig(CONFIG);
+        CloudPickController.INSTANCE.setConfig(CONFIG);
         Ash.LOGGER.info("ash client ready (attack key = {}, toggle = {}, approach = {})",
                 CONFIG.keyCode, CONFIG.toggleMode, CONFIG.autoApproach);
     }
@@ -41,6 +43,9 @@ public class AshClient implements ClientModInitializer {
      * held movement keys, the queued script, the locked combat target and the aim controller.
      * The attack toggle itself is switched off too, so after a reload the engine is in a
      * known state rather than half-applying a changed reach or cooldown.
+     *
+     * The CloudPick module is reset as well, so it declares itself again on the next tick
+     * against the freshly read channel and delay.
      */
     public static void reloadEverything() {
         CONFIG.load();
@@ -49,5 +54,6 @@ public class AshClient implements ClientModInitializer {
         CombatEngine.INSTANCE.resetAll();
         FishingController.INSTANCE.hardReset();
         RespawnHandler.INSTANCE.hardReset();
+        CloudPickController.INSTANCE.hardReset();
     }
 }

@@ -1,5 +1,6 @@
 package com.leaves.ash.client.mixin;
 
+import com.leaves.ash.client.cloudpick.CloudPickController;
 import com.leaves.ash.client.command.ClientCommands;
 import com.leaves.ash.client.combat.CombatEngine;
 import com.leaves.ash.client.fish.FishingController;
@@ -30,6 +31,7 @@ public class MinecraftTickMixin {
         MovementController.INSTANCE.tick(mc);
         FishingController.INSTANCE.tick(mc);
         RespawnHandler.INSTANCE.tick(mc);
+        CloudPickController.INSTANCE.tick(mc);
         ClientCommands.INSTANCE.tick();
     }
 }

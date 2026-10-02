@@ -11,8 +11,10 @@
 
 ## 使用
 
-- 默认**按一下 R 开启，再按一下关闭**（`toggleMode=true`）。想改回长按生效就设 `toggleMode=false`。
-- 改键在 `config/ash-client.properties` 里改 `keyCode`（GLFW key code，R=82）。
+- 默认**按一下句号 `.` 开启，再按一下关闭**（`toggleMode=true`）。想改回长按生效就设 `toggleMode=false`。
+- 改键在 `config/ash-client.properties` 里改 `keyCode`（GLFW key code，句号=46）。
+- ⚠ 已经存在的配置文件里如果留着旧的 `keyCode=82`（R），它会覆盖新默认值——想换成句号就
+  把这行改成 `keyCode=46`，或直接删掉这行再重启。
 - 配置文件在首次启动时自动生成，之后游戏内不会热更新，**改完要重启客户端**。
 - `debug=true` 时会在动作栏打印锁定/丢失目标的信息，用来验证目标筛选是否按预期工作。
 

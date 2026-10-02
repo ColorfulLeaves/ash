@@ -1,5 +1,6 @@
 package com.leaves.ash.client.config;
 
+import com.leaves.ash.client.cloudpick.CloudPickProtocol;
 import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
@@ -16,7 +17,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -123,8 +127,13 @@ public final class AshConfig {
      */
     public boolean toggleMode = true;
 
-    /** GLFW key that toggles the engine; polled directly, never shown in the controls menu */
-    public int keyCode = GLFW.GLFW_KEY_R;
+    /**
+     * GLFW key that toggles the engine; polled directly, never shown in the controls menu.
+     *
+     * Full stop, not R: R is one of the keys CloudPick servers bind things to, and ash is
+     * not going to take it hostage. Period has no vanilla binding of its own.
+     */
+    public int keyCode = GLFW.GLFW_KEY_PERIOD;
 
     /**
      * Walk to the target when nothing is inside reach. Movement is done by setting the
@@ -199,6 +208,31 @@ public final class AshConfig {
     /** report "vanilla" on the minecraft:brand channel instead of "fabric" */
     public boolean restoreVanillaBrand = true;
 
+    // ---- cloud pick (yslelf.cloudpick plugin channel) ----
+
+    /**
+     * Master switch for the CloudPick module. Off by default.
+     *
+     * This is the only place in ash that builds a packet by hand, and an unsolicited plugin
+     * message on a channel nobody listens to is a fingerprint as much as it is noise, so it
+     * stays silent until it is switched on for a server that actually runs the mod.
+     */
+    public boolean cloudPick = false;
+
+    /** how long after joining to declare; the real mod is not instant either */
+    public int cloudPickHandshakeDelayMs = 800;
+
+    /**
+     * The keys to offer, comma separated, e.g. I,J,K,L.
+     *
+     * A-Z, 1-9 and F1-F12 only, upper cased on load. Anything else is dropped with a line
+     * in the log: those are the names the mod itself would put on the wire (it upper cases
+     * glfwGetKeyName), and every other one is a guess against a case sensitive match.
+     *
+     * Case does not matter when typing them here - "i,j" becomes I,J.
+     */
+    public String cloudPickKeys = "";
+
     public boolean debug = false;
 
     /** with debug on, log every entity you punch while sneaking with an empty hand */
@@ -207,8 +241,32 @@ public final class AshConfig {
     /** nameFilters split, trimmed and lower-cased once at load time */
     private final List<String> parsedNameFilters = new ArrayList<>();
 
+    /** cloudPickKeys split, trimmed and upper-cased once at load time */
+    private final List<String> parsedCloudPickKeys = new ArrayList<>();
+
+    /** the same keys indexed by GLFW code, so a physical press is looked up instead of mapped */
+    private final Map<Integer, String> parsedCloudPickCodes = new HashMap<>();
+
     public List<String> filters() {
         return Collections.unmodifiableList(parsedNameFilters);
+    }
+
+    /**
+     * The configured key names in order, already upper cased the way the mod sends them.
+     * This is what goes on the wire, and the only list {@link #cloudPickKeyName} is built from.
+     */
+    public List<String> cloudPickKeys() {
+        return Collections.unmodifiableList(parsedCloudPickKeys);
+    }
+
+    /**
+     * GLFW code to key name, built once at load so a physical press is one map lookup.
+     *
+     * @param glfwCode an incoming GLFW key event
+     * @return the name to send, or null if this key is not one we listen for
+     */
+    public String cloudPickKeyName(int glfwCode) {
+        return parsedCloudPickCodes.get(glfwCode);
     }
 
     public void load() {
@@ -300,7 +358,15 @@ public final class AshConfig {
         debug = getBool(props, "debug", debug);
         scanManualAttacks = getBool(props, "scanManualAttacks", scanManualAttacks);
 
+        cloudPick = getBool(props, "cloudPick", cloudPick);
+        cloudPickHandshakeDelayMs = Math.max(0, getInt(props, "cloudPickHandshakeDelayMs", cloudPickHandshakeDelayMs));
+        cloudPickKeys = props.getProperty("cloudPickKeys", cloudPickKeys);
+
         parseFilters();
+        parseCloudPickKeys();
+        if (cloudPick && parsedCloudPickKeys.isEmpty()) {
+            System.out.println("[ash] cloudPick is on but cloudPickKeys is empty: set cloudPickKeys=I,J,K,L in " + PATH + ".");
+        }
         if (nameFilterMode == FilterMode.WHITELIST && parsedNameFilters.isEmpty()) {
             System.out.println("[ash] nameFilters is empty and nameFilterMode=WHITELIST: nothing will be attacked. "
                     + "Use #scan samples (config/ash-entity-scan.txt) to build the list.");
@@ -367,6 +433,9 @@ public final class AshConfig {
         props.setProperty("restoreVanillaBrand", String.valueOf(restoreVanillaBrand));
         props.setProperty("debug", String.valueOf(debug));
         props.setProperty("scanManualAttacks", String.valueOf(scanManualAttacks));
+        props.setProperty("cloudPick", String.valueOf(cloudPick));
+        props.setProperty("cloudPickHandshakeDelayMs", String.valueOf(cloudPickHandshakeDelayMs));
+        props.setProperty("cloudPickKeys", cloudPickKeys);
 
         try {
             Path parent = PATH.getParent();
@@ -413,6 +482,31 @@ public final class AshConfig {
             if (!trimmed.isEmpty()) {
                 parsedNameFilters.add(trimmed);
             }
+        }
+    }
+
+    private void parseCloudPickKeys() {
+        parsedCloudPickKeys.clear();
+        parsedCloudPickCodes.clear();
+        if (cloudPickKeys == null) {
+            return;
+        }
+        for (String part : cloudPickKeys.split(",")) {
+            // Locale.ROOT, not the default: a Turkish locale upper cases "i" to dotted I,
+            // which would then fail the key whitelist and be dropped
+            String trimmed = part.trim().toUpperCase(Locale.ROOT);
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+            if (!CloudPickProtocol.isValidKeyName(trimmed)) {
+                // dropped, not sent: an illegal name would reach the server, fail the
+                // case sensitive match there and produce nothing but silence
+                System.out.println("[ash] ignoring cloudPickKeys entry \"" + trimmed
+                        + "\" - only A-Z, 1-9 and F1-F12 are supported");
+                continue;
+            }
+            parsedCloudPickKeys.add(trimmed);
+            parsedCloudPickCodes.put(CloudPickProtocol.glfwCodeFor(trimmed), trimmed);
         }
     }
 

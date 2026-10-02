@@ -1,6 +1,8 @@
 package com.leaves.ash.client.command;
 
 import com.leaves.ash.client.AshClient;
+import com.leaves.ash.client.cloudpick.CloudPickController;
+import com.leaves.ash.client.cloudpick.CloudPickProtocol;
 import com.leaves.ash.client.combat.CombatEngine;
 import com.leaves.ash.client.config.AshConfig;
 import com.leaves.ash.client.debug.EntityScanner;
@@ -27,6 +29,7 @@ import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.Comparator;
 import java.util.Deque;
+import java.util.Locale;
 import java.util.List;
 
 /**
@@ -83,6 +86,7 @@ public final class ClientCommands {
             case "scan" -> scan(args);
             case "filters" -> filters();
             case "near" -> near(args);
+            case "cp" -> cloudPick(args);
             case "help" -> help();
             default -> reply("unknown command: #" + name);
         }
@@ -375,8 +379,87 @@ public final class ClientCommands {
         reply("usage: #scan clear");
     }
 
+    // ---- cloud pick ----
+
+    /**
+     * #cp on its own prints the state, which is the fastest way to see why a key does
+     * nothing: module off, no keys configured, or the handshake never went out.
+     */
+    private void cloudPick(String args) {
+        Minecraft mc = Minecraft.getInstance();
+        AshConfig config = AshClient.CONFIG;
+        if (mc == null || config == null) {
+            reply("no config");
+            return;
+        }
+        String[] parts = args.trim().isEmpty() ? new String[0] : args.trim().split("\\s+");
+        String sub = parts.length == 0 ? "status" : parts[0].toLowerCase();
+
+        switch (sub) {
+            case "status" -> {
+                List<String> keys = config.cloudPickKeys();
+                reply("cloudPick = " + config.cloudPick + " (master enabled = " + config.enabled + ")");
+                reply("handshake = " + (CloudPickController.INSTANCE.isHandshakeSent() ? "sent" : "not sent yet")
+                        + ", channel = " + CloudPickProtocol.CHANNEL);
+                reply("keys = " + keys.size() + (keys.isEmpty()
+                        ? "  <- set cloudPickKeys=I,J,K,L (A-Z, 1-9, F1-F12) in the config" : ""));
+            }
+            case "on", "off" -> {
+                config.cloudPick = "on".equals(sub);
+                config.save();
+                CloudPickController.INSTANCE.hardReset();
+                reply("cloudPick = " + config.cloudPick);
+            }
+            case "keys" -> {
+                List<String> keys = config.cloudPickKeys();
+                if (keys.isEmpty()) {
+                    reply("no keys configured: cloudPickKeys=I,J,K,L (A-Z, 1-9, F1-F12) in " + AshConfig.PATH);
+                    return;
+                }
+                for (int i = 0; i < keys.size(); i++) {
+                    reply("  [" + i + "] " + keys.get(i));
+                }
+            }
+            case "send" -> {
+                if (parts.length < 2) {
+                    reply("usage: #cp send <key>   A-Z, 1-9 or F1-F12, e.g. #cp send I");
+                    return;
+                }
+                if (mc.player == null) {
+                    reply("no player");
+                    return;
+                }
+                String key = parts[1].trim().toUpperCase(Locale.ROOT);
+                if (CloudPickController.INSTANCE.press(mc, key)) {
+                    reply("sent press \"" + key + "\"  " + CloudPickProtocol.hex(CloudPickProtocol.keyPress(key)));
+                }
+            }
+            case "handshake" -> {
+                if (mc.player == null) {
+                    reply("no player");
+                    return;
+                }
+                CloudPickController.INSTANCE.sendHandshake(mc);
+            }
+            case "raw" -> {
+                if (parts.length < 2) {
+                    reply("usage: #cp raw <hex>   e.g. #cp raw 400000000A014900000000");
+                    return;
+                }
+                try {
+                    CloudPickController.INSTANCE.sendRaw(mc, CloudPickProtocol.fromHex(parts[1]));
+                    reply("sent " + parts[1]);
+                } catch (RuntimeException e) {
+                    reply("bad hex: " + parts[1]);
+                }
+            }
+            default -> reply("usage: #cp [on|off] | keys | send <key> | handshake | raw <hex>");
+        }
+    }
+
     private void help() {
         reply("#reload  #goto x y z  #stop  #debug  #run <path>  #wait <ms>  #where  #fish [on|off]  #respawn  #filters  #near [r]  #scan clear");
+        reply("#cp  (cloud pick: on|off, keys, send <key>, handshake, raw <hex>)");
     }
 
     private static double coordinate(String token, double origin) {
